@@ -1,19 +1,8 @@
 // Ripped from https://github.com/scottrippey/react-use-event-hook
-import { useInsertionEffect, useLayoutEffect, useRef } from "react";
+import { useInsertionEffect, useRef } from "react";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyFunction = (...args: any[]) => any;
-const noop = () => void 0;
-
-/**
- * Suppress the warning when using useLayoutEffect with SSR. (https://reactjs.org/link/uselayouteffect-ssr)
- * Make use of useInsertionEffect if available.
- */
-const useInsertionEffect_ =
-  typeof window !== "undefined"
-    ? // useInsertionEffect is available in React 18+
-      useInsertionEffect || useLayoutEffect
-    : noop;
 
 /**
  * Similar to useCallback, with a few subtle differences:
@@ -29,13 +18,15 @@ export function useEvent<TCallback extends AnyFunction>(
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
     useEvent_shouldNotBeInvokedBeforeMount as any
   );
-  useInsertionEffect_(() => {
+  
+  // useInsertionEffect is stable in React 19 and handles SSR properly
+  useInsertionEffect(() => {
     latestRef.current = callback;
   }, [callback]);
 
   // Create a stable callback that always calls the latest callback:
   // using useRef instead of useCallback avoids creating and empty array on every render
-  const stableRef = useRef<TCallback>();
+  const stableRef = useRef<TCallback | null>(null);
   if (!stableRef.current) {
     stableRef.current = function (this: unknown) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return, prefer-rest-params, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
